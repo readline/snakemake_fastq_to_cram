@@ -1,0 +1,8 @@
+cachedir: cache
+docker:
+singularity:
+simg:
+    fastp: https://depot.galaxyproject.org/singularity/fastp%3A0.24.0--heae3180_1
+    gatk:  https://depot.galaxyproject.org/singularity/gatk4%3A4.6.1.0--py310hdfd78af_0
+    bwa:   https://depot.galaxyproject.org/singularity/bwa%3A0.7.8--h577a1d6_10
+    mosdepth: https://depot.galaxyproject.org/singularity/mosdepth%3A0.3.10--h4e814b3_1

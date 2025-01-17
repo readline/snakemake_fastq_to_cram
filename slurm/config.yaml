@@ -1,0 +1,30 @@
+executor: slurm
+slurm:
+  command: "sbatch"
+  submit-template: >-
+    --partition={resources.partition}
+    --cpus-per-task={threads}
+    --mem={resources.mem}
+    --time={resources.time}
+    --job-name=smk_{rule}
+    --output=logs/slurm/{rule}.%j.out
+    --error=logs/slurm/{rule}.%j.err
+default-resources:
+  - slurm_partition=defq
+  - mem=8gb
+  - runtime=172800
+  - extra=""
+jobs: 1000
+latency-wait: 60
+local-cores: 8
+restart-times: 1
+max-jobs-per-second: 10
+keep-going: True
+rerun-incomplete: True
+rerun-triggers: mtime
+printshellcmds: True
+scheduler: greedy
+use-conda: True
+conda-frontend: mamba
+max-status-checks-per-second: 10
+local-cores: 8

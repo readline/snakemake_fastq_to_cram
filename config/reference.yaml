@@ -1,0 +1,5 @@
+cachedir: cache
+references:
+    gatkbundle:
+        link:   /home/kaiyu/yuk5/reference/gatk/hg38/v0
+        path:   reference/hg38
