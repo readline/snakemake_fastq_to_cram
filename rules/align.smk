@@ -68,7 +68,7 @@ rule Markdup:
         tmpdir=lambda wildcards: join(config['workdir'], "02.Alignment", "Level2", wildcards.lib, wildcards.lib + ".tmp"),
     resources:
         cpus_per_task = 8,
-        mem = '48G',
+        mem = '60G',
         runtime = '2d',
         partition = 'defq',
     conda:
