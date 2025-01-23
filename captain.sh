@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32g
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16g
 #SBATCH --time=10-00:00:00
 #SBATCH --parsable
 #SBATCH -J "[[PIPENICKNAME]]"
@@ -47,9 +47,6 @@ snakemake --latency-wait 120 --snakefile Snakefile -d "[[WORKDIR]]" \
   --executor slurm \
   --restart-times 1 \
   --rerun-incomplete \
-  --rerun-triggers mtime
-  # --use-singularity \
-  # --singularity-args "-B /mnt/nfs,/home/kaiyu,/Labs,/Projects" \
-# Create summary report
-snakemake -d "[[WORKDIR]]/Pipe_runtime/[[SNAPSHOT]]" --report "[[WORKDIR]]/Pipe_runtime/[[SNAPSHOT]]/Snakemake_Report.html"
-
+  --rerun-triggers mtime && \
+snakemake -d "[[WORKDIR]]/Pipe_runtime/[[SNAPSHOT]]" --report "[[WORKDIR]]/Pipe_runtime/[[SNAPSHOT]]/Snakemake_Report.html" && \
+echo Snakemake run $uid finished!
