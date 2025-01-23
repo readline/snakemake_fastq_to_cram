@@ -38,6 +38,8 @@ rule Fastp:
         " -I {input.r2}" 
         " -o {output.r1}" 
         " -O {output.r2}" 
+        " -t 1"
+        " -T 1"
         " -h {output.html}" 
         " -j {output.json}" 
         " -w {resources.cpus_per_task}"
