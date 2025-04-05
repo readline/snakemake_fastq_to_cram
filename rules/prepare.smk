@@ -40,6 +40,7 @@ rule Fastp:
         " -O {output.r2}" 
         " -t 1"
         " -T 1"
+        " --dont_eval_duplication"
         " -h {output.html}" 
         " -j {output.json}" 
         " -w {resources.cpus_per_task}"
