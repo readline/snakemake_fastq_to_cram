@@ -36,7 +36,7 @@ rule cramqc__collect_quality_yield_metrics:
     resources:
         cpus_per_task = 4,
         mem = '4G',
-        runtime = '10d',
+        runtime = '7d',
         partition = 'defq',
     conda:
         config['conda']['align']
@@ -62,7 +62,7 @@ rule cramqc__collect_wgs_metrics:
     resources:
         cpus_per_task = 4,
         mem = '4G',
-        runtime = '10d',
+        runtime = '7d',
         partition = 'defq',
     conda:
         config['conda']['align']
@@ -95,7 +95,7 @@ rule cramqc__collect_all_reads_multiple_metrics:
     resources:
         cpus_per_task = 4,
         mem = '8G',
-        runtime = '10d',
+        runtime = '7d',
         partition = 'defq',
     conda:
         config['conda']['align']
@@ -134,7 +134,7 @@ rule cramqc__collect_read_groups_multiple_metrics:
     resources:
         cpus_per_task = 4,
         mem = '8G',
-        runtime = '10d',
+        runtime = '7d',
         partition = 'defq',
     conda:
         config['conda']['align']
@@ -173,7 +173,7 @@ rule cramqc__collect_aggregation_metrics:
     resources:
         cpus_per_task = 4,
         mem = '8G',
-        runtime = '10d',
+        runtime = '7d',
         partition = 'defq',
     conda:
         config['conda']['align']
@@ -212,7 +212,7 @@ rule cramqc__mosdepth:
     resources:
         cpus_per_task = 16,
         mem = '32G',
-        runtime = '10d',
+        runtime = '7d',
         partition = 'defq',
     conda:
         config['conda']['align']
@@ -233,6 +233,40 @@ rule cramqc__mosdepth:
         "    {input.cram}"
         " >> {log.out} 2>> {log.err}\n"
 
+rule cramqc__fingerprint:
+    input:
+        cram = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.cram"),
+    output:
+        fingerprint = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Fingerprint", "fingerprint.vcf"),
+        metrics     = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Fingerprint", "fingerprint.rg.metrics"),
+    log:
+        out = join(config['pipelinedir'], "logs", "cramqc__fingerprint", "{sample}.o"),
+        err = join(config['pipelinedir'], "logs", "cramqc__fingerprint", "{sample}.e"),
+    resources:
+        cpus_per_task = 4,
+        mem = '8G',
+        runtime = '7d',
+        partition = 'defq',
+    conda:
+        config['conda']['align']
+    # container:
+        # config['container']['mosdepth']
+    shell:
+        "gatk --java-options \"-Xms5000m -Xmx6500m\" "
+        "    ExtractFingerprint"
+        "    -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta"
+        "    -H {config[references][gatkbundle]}/Homo_sapiens_assembly38.haplotype_database.txt"
+        "    -I {input.cram}"
+        "    -O {output.fingerprint}"
+        " > {log.out} 2> {log.err}\n"
+        "gatk --java-options \"-Xms5000m -Xmx6500m\" "
+        "    CrosscheckFingerprints"
+        "    -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta"
+        "    -H {config[references][gatkbundle]}/Homo_sapiens_assembly38.haplotype_database.txt"
+        "    -I {input.cram}"
+        "    -O {output.metrics}"
+        " >> {log.out} 2>> {log.err}\n"
+
 rule cramqc__summary_metrics:
     input:
         join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Flagstat", "Flagstat.json"),
@@ -242,6 +276,7 @@ rule cramqc__summary_metrics:
         join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "ReadGroupsMultiple.ok"),
         join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "SM_LB_Aggregation.ok"),
         join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Mosdepth", "{sample}.mosdepth.summary.txt"),
+        join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Fingerprint", "fingerprint.rg.metrics"),
     output:
         status   = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Summary.ok"),
     log:
