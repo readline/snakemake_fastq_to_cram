@@ -1,5 +1,119 @@
 from scripts.utils import allocated,ignore
 
+rule cramqc__parallel:
+    input:
+        cram = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.cram"),
+    output:
+        flagstat = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Flagstat", "Flagstat.json"),
+        metrix1 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "QualityYield.metrics"),
+        metrix2 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "WGS.metrics"),
+        metrix3 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "AllReadsMultiple.ok"),
+        metrix4 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "ReadGroupsMultiple.ok"),
+        metrix5 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "SM_LB_Aggregation.ok"),
+        fingerprint = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Fingerprint", "fingerprint.vcf"),
+        fingerprint_metrics = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Fingerprint", "fingerprint.rg.metrics"),
+        status   = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Status.ok"),
+    log:
+        out = join(config['pipelinedir'], "logs", "cramqc__parallel", "{sample}.o"),
+        err = join(config['pipelinedir'], "logs", "cramqc__parallel", "{sample}.e"),
+    resources:
+        cpus_per_task = 12,
+        mem = '72G',
+        runtime = '4d',
+        partition = 'defq',
+    conda:
+        config['conda']['align']
+    # container:
+        # config['container']['gatk']
+    shell:
+        '''echo > {log.out} 2> {log.err}
+        echo "
+        samtools flagstat -@ 2 -O json {input.cram} > {output.flagstat} 2>>{log.err}
+        gatk --java-options \\"-Xms2g -Xmx3g\\" \
+            CollectQualityYieldMetrics \
+            -I {input.cram} \
+            -O {output.metrix1} \
+            --CREATE_MD5_FILE true \
+            -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+            >> {log.out} 2>> {log.err}
+        gatk --java-options \\"-Xms2000m -Xmx3000m\\" \
+            CollectWgsMetrics \
+            -I {input.cram} \
+            -O {output.metrix2} \
+            -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+            --INCLUDE_BQ_HISTOGRAM true \
+            --INTERVALS {config[references][gatkbundle]}/wgs_coverage_regions.hg38.interval_list \
+            --VALIDATION_STRINGENCY SILENT \
+            --USE_FAST_ALGORITHM true \
+            --CREATE_MD5_FILE true \
+            --READ_LENGTH 151 \
+            >> {log.out} 2>> {log.err}
+        gatk --java-options \\"-Xms2000m -Xmx3000m\\" \
+            CollectMultipleMetrics \
+            -I {input.cram} \
+            -O {output.metrix3} \
+            --ASSUME_SORTED true \
+            --CREATE_MD5_FILE true \
+            -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+            --VALIDATION_STRINGENCY LENIENT \
+            --PROGRAM null \
+            --PROGRAM CollectBaseDistributionByCycle \
+            --PROGRAM CollectInsertSizeMetrics \
+            --PROGRAM MeanQualityByCycle \
+            --PROGRAM QualityScoreDistribution \
+            --METRIC_ACCUMULATION_LEVEL null \
+            --METRIC_ACCUMULATION_LEVEL ALL_READS \
+            >> {log.out} 2>> {log.err}
+        gatk --java-options \\"-Xms5000m -Xmx6500m\\" \
+            CollectMultipleMetrics \
+            -I {input.cram} \
+            -O {output.metrix4} \
+            --ASSUME_SORTED true \
+            --CREATE_MD5_FILE true \
+            -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+            --VALIDATION_STRINGENCY LENIENT \
+            --PROGRAM null \
+            --PROGRAM CollectBaseDistributionByCycle \
+            --PROGRAM CollectInsertSizeMetrics \
+            --PROGRAM CollectAlignmentSummaryMetrics \
+            --PROGRAM QualityScoreDistribution \
+            --METRIC_ACCUMULATION_LEVEL ALL_READS \
+            --METRIC_ACCUMULATION_LEVEL READ_GROUP \
+            >> {log.out} 2>> {log.err}
+        gatk --java-options \\"-Xms5000m -Xmx6500m\\" \
+            CollectMultipleMetrics \
+            -I {input.cram} \
+            -O {output.metrix5} \
+            --ASSUME_SORTED true \
+            --CREATE_MD5_FILE true \
+            -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+            --PROGRAM null \
+            --PROGRAM CollectAlignmentSummaryMetrics \
+            --PROGRAM CollectInsertSizeMetrics \
+            --PROGRAM CollectSequencingArtifactMetrics \
+            --PROGRAM QualityScoreDistribution \
+            --METRIC_ACCUMULATION_LEVEL null \
+            --METRIC_ACCUMULATION_LEVEL SAMPLE \
+            --METRIC_ACCUMULATION_LEVEL LIBRARY \
+            >> {log.out} 2>> {log.err}
+        gatk --java-options \\"-Xms5000m -Xmx6500m\\" \
+            ExtractFingerprint \
+            -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+            -H {config[references][gatkbundle]}/Homo_sapiens_assembly38.haplotype_database.txt \
+            -I {input.cram} \
+            -O {output.fingerprint} \
+            >> {log.out} 2>> {log.err}
+        gatk --java-options \\"-Xms5000m -Xmx6500m\\" \
+            CrosscheckFingerprints \
+            -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+            -H {config[references][gatkbundle]}/Homo_sapiens_assembly38.haplotype_database.txt \
+            -I {input.cram} \
+            -O {output.fingerprint_metrics} \
+            >> {log.out} 2>> {log.err}
+        " | parallel -j 10
+        touch {output.status}
+        '''
+
 rule cramqc__flagstat:
     input:
         cram= join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.cram"),

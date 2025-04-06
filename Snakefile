@@ -20,5 +20,5 @@ rule all:
     input:
         expand(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.cram"),
             sample=sampledic),
-        expand(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Summary.ok"),
+        expand(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Status.ok"),
             sample=sampledic),
