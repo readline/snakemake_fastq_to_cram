@@ -192,6 +192,7 @@ rule BQSR_ht:
             -O {output.bam} \
             --USE_THREADING true \
             >> {log.out} 2>> {log.err}
+        rm -rf {params.tmpdir}
         """
 
 rule Bam_to_cram:
