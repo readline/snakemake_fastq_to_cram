@@ -127,54 +127,6 @@ rule Merge_level3:
         fi
         """
 
-rule BQSR:
-    input:
-        bam = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam"),
-        bai = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam.bai"),
-    output:
-        metrics= join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.metrics"),
-        bam=     temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bam")),
-        bai=     temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bai")),
-    params:
-        tmpdir=lambda wildcards: join(config['workdir'], "02.Alignment", "Level3", wildcards.sample, wildcards.sample + ".tmp"),
-    log:
-        out = join(config['pipelinedir'], "logs", "BQSR", "{sample}.o"),
-        err = join(config['pipelinedir'], "logs", "BQSR", "{sample}.e"),
-    resources:
-        cpus_per_task = 16,
-        mem = '64G',
-        runtime = '6d',
-        partition = 'normal_q',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
-    shell:
-        "mkdir -p {params.tmpdir} \n"
-        "gatk --java-options \"-Xms36G -Xmx36G -XX:ParallelGCThreads=16 -Djava.io.tmpdir={params.tmpdir}\""
-        "  BaseRecalibrator"
-        "  -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta"
-        "  -I {input.bam}"
-        "  -O {output.metrics}"
-        "  --use-original-qualities"
-        "  --known-sites {config[references][gatkbundle]}/Homo_sapiens_assembly38.dbsnp138.vcf"
-        "  --known-sites {config[references][gatkbundle]}/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
-        "  --known-sites {config[references][gatkbundle]}/Homo_sapiens_assembly38.known_indels.vcf.gz"
-        "  >> {log.out} 2>> {log.err} \n"
-        "gatk --java-options \"-Xms2G -Xmx2G -XX:ParallelGCThreads=2\""
-        " ApplyBQSR"
-        "  --add-output-sam-program-record"
-        "  -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta"
-        "  -I {input.bam}"
-        "  -O {output.bam}"
-        "  --use-original-qualities"
-        "  -bqsr {output.metrics}"
-        "  --static-quantized-quals 10"
-        "  --static-quantized-quals 20"
-        "  --static-quantized-quals 30"
-        "  >> {log.out} 2>> {log.err} \n"
-        "rm -rf {params.tmpdir}"
-
 rule BQSR_ht:
     input:
         bam = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam"),
@@ -183,7 +135,7 @@ rule BQSR_ht:
         metrics=temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.metrics")),
         bam    =temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bam")),
     params:
-        itvs = itvs=" ".join(itv4),
+        itvs = " ".join(itv4),
         tmpdir=lambda wildcards: join(config['workdir'], "02.Alignment", "Level3", wildcards.sample, wildcards.sample + ".tmp"),
     log:
         out = join(config['pipelinedir'], "logs", "BQSR", "{sample}.o"),
@@ -227,20 +179,21 @@ rule BQSR_ht:
                 --static-quantized-quals 20 \
                 --static-quantized-quals 30 \
                 -L {config[references][gatkbundle]}/scattered_calling_intervals/temp_$chunk\_of_50.bed \
-                >> {log.out} 2>> {log.err}
-        inputs=$( ls {params.tmpdir}/*/*.BQSR.metrics | sed 's/([^ ]*)/-I \1/g' )"
+                >> {log.out} 2>> {log.err}'
+        inputs=$( ls {params.tmpdir}/*/*.BQSR.metrics | sed 's/^/-I\ /g' )
         gatk --java-options \"-Xms3000m\" \
             GatherBQSRReports \
             $inputs \
             -O {output.metrics} \
             >> {log.out} 2>> {log.err}
-        inputs=$( ls {params.tmpdir}/*/*.BQSR.bam | sed 's/([^ ]*)/-I \1/g' )"
+        inputs=$( ls {params.tmpdir}/*/*.BQSR.bam | sed 's/^/-I\ /g' )
         gatk MergeSamFiles \
             $inputs \
             -O {output.bam} \
             --USE_THREADING true \
             >> {log.out} 2>> {log.err}
         """
+
 rule Bam_to_cram:
     input:
         bam = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bam"),
