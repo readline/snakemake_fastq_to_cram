@@ -21,7 +21,7 @@ rule Bwa_mem:
         tmpdir=lambda wildcards: join(config['workdir'], "02.Alignment", "Level1", wildcards.run, wildcards.run + ".tmp"),
     resources:
         cpus_per_task = 24,
-        mem = '90G',
+        mem = '60G',
         runtime = '2d',
         partition = 'defq',
     conda:
@@ -132,27 +132,26 @@ rule BQSR:
         bam = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam"),
         bai = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam.bai"),
     output:
-        metrics=temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.{itv}.BQSR.metrics")),
-        bam    =temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.{itv}.BQSR.bam")),
-        bai    =temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.{itv}.BQSR.bai")),
+        metrics= join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.metrics"),
+        bam=     temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bam")),
+        bai=     temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bai")),
     params:
-        itvbed=lambda wildcards: join(config['references']['gatkbundle'], "scattered_calling_intervals", "temp_"+wildcards.itv+"_of_50.bed"),
-        tmpdir=lambda wildcards: join(config['workdir'], "02.Alignment", "Level3", wildcards.sample, wildcards.sample + "." + wildcards.itv + ".tmp"),
+        tmpdir=lambda wildcards: join(config['workdir'], "02.Alignment", "Level3", wildcards.sample, wildcards.sample + ".tmp"),
     log:
-        out = join(config['pipelinedir'], "logs", "BQSR", "{sample}.{itv}.o"),
-        err = join(config['pipelinedir'], "logs", "BQSR", "{sample}.{itv}.e"),
+        out = join(config['pipelinedir'], "logs", "BQSR", "{sample}.o"),
+        err = join(config['pipelinedir'], "logs", "BQSR", "{sample}.e"),
     resources:
-        cpus_per_task = 2,
-        mem = '8G',
-        runtime = '2d',
-        partition = 'defq',
+        cpus_per_task = 16,
+        mem = '64G',
+        runtime = '6d',
+        partition = 'normal_q',
     conda:
         config['conda']['align']
     # container:
         # config['container']['gatk']
     shell:
         "mkdir -p {params.tmpdir} \n"
-        "gatk --java-options \"-Xms4G -Xmx4G -XX:ParallelGCThreads=2 -Djava.io.tmpdir={params.tmpdir}\""
+        "gatk --java-options \"-Xms36G -Xmx36G -XX:ParallelGCThreads=16 -Djava.io.tmpdir={params.tmpdir}\""
         "  BaseRecalibrator"
         "  -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta"
         "  -I {input.bam}"
@@ -161,7 +160,6 @@ rule BQSR:
         "  --known-sites {config[references][gatkbundle]}/Homo_sapiens_assembly38.dbsnp138.vcf"
         "  --known-sites {config[references][gatkbundle]}/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
         "  --known-sites {config[references][gatkbundle]}/Homo_sapiens_assembly38.known_indels.vcf.gz"
-        "  --intervals   {params.itvbed}"
         "  >> {log.out} 2>> {log.err} \n"
         "gatk --java-options \"-Xms2G -Xmx2G -XX:ParallelGCThreads=2\""
         " ApplyBQSR"
@@ -174,21 +172,25 @@ rule BQSR:
         "  --static-quantized-quals 10"
         "  --static-quantized-quals 20"
         "  --static-quantized-quals 30"
-        "  -L {params.itvbed}"
         "  >> {log.out} 2>> {log.err} \n"
         "rm -rf {params.tmpdir}"
-        
-rule BQSR_mergeM:
+
+rule BQSR_ht:
     input:
-        lambda wildcards: expand(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.{itv}.BQSR.metrics"), itv=itv4, sample=wildcards.sample),
+        bam = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam"),
+        bai = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam.bai"),
     output:
-        metrics= join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.metrics"),
+        metrics=temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.metrics")),
+        bam    =temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bam")),
+    params:
+        itvs = itvs=" ".join(itv4),
+        tmpdir=lambda wildcards: join(config['workdir'], "02.Alignment", "Level3", wildcards.sample, wildcards.sample + ".tmp"),
     log:
-        out = join(config['pipelinedir'], "logs", "BQSR_mergeM", "{sample}.o"),
-        err = join(config['pipelinedir'], "logs", "BQSR_mergeM", "{sample}.e"),
+        out = join(config['pipelinedir'], "logs", "BQSR", "{sample}.o"),
+        err = join(config['pipelinedir'], "logs", "BQSR", "{sample}.e"),
     resources:
-        cpus_per_task = 4,
-        mem = '8G',
+        cpus_per_task = 32,
+        mem = '128G',
         runtime = '2d',
         partition = 'defq',
     conda:
@@ -196,38 +198,73 @@ rule BQSR_mergeM:
     # container:
         # config['container']['gatk']
     shell:
-        "inputs=$( echo {input} | sed 's/([^ ]*)/-I \1/g' )\n"
-        "gatk --java-options \"-Xms3000m\""
-        " GatherBQSRReports"
-        " $inputs"
-        " -O {output.metrics}"
-        " >> {log.out} 2>> {log.err}"
-    
-
-rule BQSR_mergeB:
+        """mkdir -p {params.tmpdir} \
+            > {log.out} 2> {log.err}
+        echo "{params.itvs}" | tr ' ' '\\n' | parallel -j 16 '
+            chunk={{}}
+            mkdir -p {params.tmpdir}/$chunk \
+                >> {log.out} 2>> {log.err} 
+            gatk --java-options \"-Xms4G -Xmx4G -XX:ParallelGCThreads=2 -Djava.io.tmpdir={params.tmpdir}/$chunk\" \
+                BaseRecalibrator \
+                -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+                -I {input.bam} \
+                -O {params.tmpdir}/$chunk/$chunk.BQSR.metrics \
+                --use-original-qualities \
+                --known-sites {config[references][gatkbundle]}/Homo_sapiens_assembly38.dbsnp138.vcf \
+                --known-sites {config[references][gatkbundle]}/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz \
+                --known-sites {config[references][gatkbundle]}/Homo_sapiens_assembly38.known_indels.vcf.gz \
+                --intervals {config[references][gatkbundle]}/scattered_calling_intervals/temp_$chunk\_of_50.bed \
+                >> {log.out} 2>> {log.err}
+            gatk --java-options \"-Xms4G -Xmx4G -XX:ParallelGCThreads=2 -Djava.io.tmpdir={params.tmpdir}/$chunk\" \
+                ApplyBQSR \
+                --add-output-sam-program-record \
+                -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
+                -I {input.bam} \
+                -O {params.tmpdir}/$chunk/$chunk.BQSR.bam \
+                --use-original-qualities \
+                -bqsr {params.tmpdir}/$chunk/$chunk.BQSR.metrics \
+                --static-quantized-quals 10 \
+                --static-quantized-quals 20 \
+                --static-quantized-quals 30 \
+                -L {config[references][gatkbundle]}/scattered_calling_intervals/temp_$chunk\_of_50.bed \
+                >> {log.out} 2>> {log.err}
+        inputs=$( ls {params.tmpdir}/*/*.BQSR.metrics | sed 's/([^ ]*)/-I \1/g' )"
+        gatk --java-options \"-Xms3000m\" \
+            GatherBQSRReports \
+            $inputs \
+            -O {output.metrics} \
+            >> {log.out} 2>> {log.err}
+        inputs=$( ls {params.tmpdir}/*/*.BQSR.bam | sed 's/([^ ]*)/-I \1/g' )"
+        gatk MergeSamFiles \
+            $inputs \
+            -O {output.bam} \
+            --USE_THREADING true \
+            >> {log.out} 2>> {log.err}
+        """
+rule Bam_to_cram:
     input:
-        lambda wildcards: expand(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.{itv}.BQSR.bam"), itv=itv4, sample=wildcards.sample),
+        bam = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bam"),
     output:
         cram= join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.cram"),
     log:
-        out = join(config['pipelinedir'], "logs", "BQSR_mergeB", "{sample}.o"),
-        err = join(config['pipelinedir'], "logs", "BQSR_mergeB", "{sample}.e"),
+        out = join(config['pipelinedir'], "logs", "Bam_to_cram", "{sample}.o"),
+        err = join(config['pipelinedir'], "logs", "Bam_to_cram", "{sample}.e"),
     resources:
         cpus_per_task = 8,
-        mem = '16G',
+        mem = '32G',
         runtime = '2d',
-        partition = 'defq',
+        partition = 'normal_q',
     conda:
         config['conda']['align']
     # container:
         # config['container']['gatk']
     shell:
-        "samtools merge"
+        "samtools view"
         "  -@ {resources.cpus_per_task}"
         "  --reference {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta"
         "  --output-fmt CRAM"
-        "  {output.cram}"
-        "  {input}"
+        "  -o {output.cram}"
+        "  {input.bam}"
         "  > {log.out} 2> {log.err}\n"
         "samtools index"
         "  -@ {resources.cpus_per_task}"
