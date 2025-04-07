@@ -140,13 +140,13 @@ def main():
         config['container'] = {}
         if not tmpcfg['docker']:
             tmpcfg['docker'] = {}
-        if not tmpcfg['singularity']:
-            tmpcfg['singularity'] = {}
+        if not tmpcfg['apptainer']:
+            tmpcfg['apptainer'] = {}
         if not tmpcfg['simg']:
             tmpcfg['simg'] = {}
         for c in tmpcfg['docker']:
             config['container'][c] = os.path.join(config['cachedir'], 'container', '%s.simg'%(c))
-        for c in tmpcfg['singularity']:
+        for c in tmpcfg['apptainer']:
             config['container'][c] = os.path.join(config['cachedir'], 'container', '%s.simg'%(c))
         for c in tmpcfg['simg']:
             config['container'][c] = os.path.join(config['cachedir'], 'container', '%s.simg'%(c))

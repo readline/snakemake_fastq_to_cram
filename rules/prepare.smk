@@ -27,10 +27,10 @@ rule Fastp:
         mem = '24G',
         slurm_partition = 'defq',
         runtime = '2d', 
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['fastp']
+    #conda:
+    #    config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "cd {params.folder} \n"
         "fastp"
