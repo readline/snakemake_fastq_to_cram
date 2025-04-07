@@ -47,6 +47,8 @@ snakemake --latency-wait 120 --snakefile Snakefile -d "[[WORKDIR]]" \
   --jobname "{name}.{jobid}.uid_"$uid".sh" \
   --keep-going \
   --executor slurm \
+  --use-apptainer \
+  --apptainer-args "-B /mnt:/mnt,/home:/home,/scratch:/scratch" \
   --restart-times 1 \
   --rerun-incomplete \
   --rerun-triggers mtime && \

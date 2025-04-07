@@ -24,10 +24,10 @@ rule Bwa_mem:
         mem = '60G',
         runtime = '2d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "mkdir -p {params.tmpdir} \n"
         "bwa mem"
@@ -71,10 +71,10 @@ rule Markdup:
         mem = '60G',
         runtime = '2d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "mkdir -p {params.tmpdir} \n"
         "gatk --java-options \"-Xms30G -Xmx30G -XX:ParallelGCThreads=2 -Djava.io.tmpdir={params.tmpdir}\""
@@ -105,10 +105,10 @@ rule Merge_level3:
         mem = '16G',
         runtime = '2d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         """
         if [ $(echo {input.bam} | wc -w) -gt 1 ]; then
@@ -145,10 +145,10 @@ rule BQSR_ht:
         mem = '128G',
         runtime = '2d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         """mkdir -p {params.tmpdir} \
             > {log.out} 2> {log.err}
@@ -208,10 +208,10 @@ rule Bam_to_cram:
         mem = '32G',
         runtime = '2d',
         partition = 'normal_q',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "samtools view"
         "  -@ {resources.cpus_per_task}"

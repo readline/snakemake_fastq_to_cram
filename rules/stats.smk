@@ -21,10 +21,10 @@ rule cramqc__parallel:
         mem = '72G',
         runtime = '4d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         '''echo > {log.out} 2> {log.err}
         echo "
@@ -129,10 +129,10 @@ rule cramqc__flagstat:
         mem = '16G',
         runtime = '2d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         """
         cd {params.folder}
@@ -152,10 +152,10 @@ rule cramqc__collect_quality_yield_metrics:
         mem = '4G',
         runtime = '7d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "gatk --java-options \"-Xms2000m -Xmx3000m\" "
         "  CollectQualityYieldMetrics"
@@ -211,10 +211,10 @@ rule cramqc__collect_all_reads_multiple_metrics:
         mem = '8G',
         runtime = '7d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "gatk --java-options \"-Xms5000m -Xmx6500m\" "
         "  CollectMultipleMetrics"
@@ -250,10 +250,10 @@ rule cramqc__collect_read_groups_multiple_metrics:
         mem = '8G',
         runtime = '7d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    #conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "gatk --java-options \"-Xms5000m -Xmx6500m\" "
         "  CollectMultipleMetrics"
@@ -289,10 +289,10 @@ rule cramqc__collect_aggregation_metrics:
         mem = '8G',
         runtime = '7d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['gatk']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "gatk --java-options \"-Xms5000m -Xmx6500m\" "
         "  CollectMultipleMetrics"
@@ -328,10 +328,10 @@ rule cramqc__mosdepth:
         mem = '32G',
         runtime = '7d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['mosdepth']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "export MOSDEPTH_Q0=NO_COVERAGE \n"
         "export MOSDEPTH_Q1=LOW_COVERAGE \n"
@@ -361,10 +361,10 @@ rule cramqc__fingerprint:
         mem = '8G',
         runtime = '7d',
         partition = 'defq',
-    conda:
-        config['conda']['align']
-    # container:
-        # config['container']['mosdepth']
+    # conda:
+        # config['conda']['align']
+    container:
+        config['container']['align']
     shell:
         "gatk --java-options \"-Xms5000m -Xmx6500m\" "
         "    ExtractFingerprint"

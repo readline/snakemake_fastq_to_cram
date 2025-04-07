@@ -1,6 +1,7 @@
 cachedir: cache
 docker:
-singularity:
+    align: docker://funsinaime/genome_align:1.0
+apptainer:
 simg:
     fastp: https://depot.galaxyproject.org/singularity/fastp%3A0.24.0--heae3180_1
     gatk:  https://depot.galaxyproject.org/singularity/gatk4%3A4.6.1.0--py310hdfd78af_0

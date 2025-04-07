@@ -30,12 +30,12 @@ def container(config):
             savefile.write(config['simg'][img]+'\n')
             print('Container', img, 'downloaded...')
     
-    if not config['singularity']:
-        config['singularity'] = {}
+    if not config['apptainer']:
+        config['apptainer'] = {}
     if not config['docker']:
         config['docker'] = {}
     # Pull from docker registries
-    for registry in ['docker','singularity']:
+    for registry in ['docker','apptainer']:
         for img in config[registry]:
             if not os.path.exists('%s/%s.simg.ok'%(containerdir, img)):
                 pass
@@ -47,7 +47,7 @@ def container(config):
                     else:
                         pass
             try:
-                cmd = 'module load singularity && singularity pull %s/%s.simg %s'%(containerdir, img, config[registry][img])
+                cmd = 'apptainer pull %s/%s.simg %s'%(containerdir, img, config[registry][img])
                 print(cmd)
                 subprocess.check_call([cmd], shell=True, executable="/bin/bash")
             except subprocess.CalledProcessError:
