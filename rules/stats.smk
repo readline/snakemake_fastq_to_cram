@@ -20,7 +20,7 @@ rule cramqc__parallel:
         cpus_per_task = 12,
         mem = '72G',
         runtime = '4d',
-        partition = 'defq',
+        partition = lambda wildcards: config['partition']['normal'],
     # conda:
         # config['conda']['align']
     container:

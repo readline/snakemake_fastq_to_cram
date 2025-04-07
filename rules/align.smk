@@ -9,9 +9,11 @@ rule Bwa_mem:
     input:
         read1 = join(config['workdir'], "01.clean_data", "{run}", "{run}.R1.fastq.gz"),
         read2 = join(config['workdir'], "01.clean_data", "{run}", "{run}.R2.fastq.gz"),
+        json  = join(config['workdir'], "01.clean_data", "{run}", "{run}.fastp.json"),
     output:
         bam = temp(join(config['workdir'], "02.Alignment", "Level1", "{run}", "{run}.sort.bam")),
         bai = temp(join(config['workdir'], "02.Alignment", "Level1", "{run}", "{run}.sort.bai")),
+        ok  = temp(join(config['workdir'], "02.Alignment", "Level1", "{run}", "{run}.sort.bam.ok")),
     log:
         out = join(config['pipelinedir'], "logs", "Bwa_mem", "{run}.o"),
         err = join(config['pipelinedir'], "logs", "Bwa_mem", "{run}.e"),
@@ -23,7 +25,7 @@ rule Bwa_mem:
         cpus_per_task = 24,
         mem = '60G',
         runtime = '2d',
-        partition = 'defq',
+        partition = lambda wildcards: config['partition']['normal'],
     # conda:
         # config['conda']['align']
     container:
@@ -51,15 +53,18 @@ rule Bwa_mem:
         "  --CREATE_INDEX true"
         "  --TMP_DIR {params.tmpdir}"
         "  >> {log.out} 2>> {log.err} \n"
-        "rm -rf {params.tmpdir}"
+        "rm -rf {params.tmpdir}\n"
+        "touch {output.ok}"
 
 rule Markdup:
     input:
         bam = lambda wildcards: expand(join(config['workdir'], "02.Alignment", "Level1", "{run}", "{run}.sort.bam"), run=libdic[wildcards.lib]),
         bai = lambda wildcards: expand(join(config['workdir'], "02.Alignment", "Level1", "{run}", "{run}.sort.bai"), run=libdic[wildcards.lib]),
+        ok  = lambda wildcards: expand(join(config['workdir'], "02.Alignment", "Level1", "{run}", "{run}.sort.bam.ok"), run=libdic[wildcards.lib]),
     output:
         bam    =temp(join(config['workdir'], "02.Alignment", "Level2", "{lib}", "{lib}.sort.md.bam")),
         bai    =temp(join(config['workdir'], "02.Alignment", "Level2", "{lib}", "{lib}.sort.md.bam.bai")),
+        ok     =temp(join(config['workdir'], "02.Alignment", "Level2", "{lib}", "{lib}.sort.md.bam.ok")),
         metrics=join(config['workdir'], "02.Alignment", "Level2", "{lib}", "{lib}.sort.md.metrics"),
     log:
         out = join(config['pipelinedir'], "logs", "Markdup", "{lib}.o"),
@@ -70,7 +75,7 @@ rule Markdup:
         cpus_per_task = 8,
         mem = '60G',
         runtime = '2d',
-        partition = 'defq',
+        partition = lambda wildcards: config['partition']['normal'],
     # conda:
         # config['conda']['align']
     container:
@@ -88,15 +93,18 @@ rule Markdup:
         "  --TMP_DIR {params.tmpdir}"
         "  > {log.out} 2> {log.err} \n"
         "sambamba index -t {resources.cpus_per_task} {output.bam} >> {log.out} 2>> {log.err} \n"
-        "rm -rf {params.tmpdir}"
-        
+        "rm -rf {params.tmpdir}\n"
+        "touch {output.ok}"
+
 rule Merge_level3:
     input:
         bam = lambda wildcards: expand(join(config['workdir'], "02.Alignment", "Level2", "{lib}", "{lib}.sort.md.bam"), lib=sampledic[wildcards.sample]),
         bai = lambda wildcards: expand(join(config['workdir'], "02.Alignment", "Level2", "{lib}", "{lib}.sort.md.bam.bai"), lib=sampledic[wildcards.sample]),
+        ok  = lambda wildcards: expand(join(config['workdir'], "02.Alignment", "Level2", "{lib}", "{lib}.sort.md.bam.ok"), lib=sampledic[wildcards.sample]),
     output:
         bam=temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam")),
         bai=temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam.bai")),
+        ok =temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam.ok")),
     log:
         out = join(config['pipelinedir'], "logs", "Merge_level3", "{sample}.o"),
         err = join(config['pipelinedir'], "logs", "Merge_level3", "{sample}.e"),
@@ -104,7 +112,7 @@ rule Merge_level3:
         cpus_per_task = 8,
         mem = '16G',
         runtime = '2d',
-        partition = 'defq',
+        partition = lambda wildcards: config['partition']['normal'],
     # conda:
         # config['conda']['align']
     container:
@@ -125,12 +133,14 @@ rule Merge_level3:
                 -@ {resources.cpus_per_task} \
                 {output.bam} >> {log.out} 2>> {log.err}
         fi
+        touch {output.ok}
         """
 
 rule BQSR_ht:
     input:
         bam = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam"),
         bai = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam.bai"),
+        ok  = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.sort.md.bam.ok"),
     output:
         metrics=temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.metrics")),
         bam    =temp(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.bam")),
@@ -144,7 +154,7 @@ rule BQSR_ht:
         cpus_per_task = 32,
         mem = '128G',
         runtime = '2d',
-        partition = 'defq',
+        partition = lambda wildcards: config['partition']['normal'],
     # conda:
         # config['conda']['align']
     container:
@@ -207,7 +217,7 @@ rule Bam_to_cram:
         cpus_per_task = 8,
         mem = '32G',
         runtime = '2d',
-        partition = 'normal_q',
+        partition = lambda wildcards: config['partition']['normal'],
     # conda:
         # config['conda']['align']
     container:
