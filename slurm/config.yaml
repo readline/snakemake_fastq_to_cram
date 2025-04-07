@@ -3,10 +3,11 @@ slurm:
   command: "sbatch"
   submit-template: >-
     --partition={resources.partition}
-    --cpus-per-task={threads}
+    --cpus-per-task={resources.cpus_per_task}
     --mem={resources.mem}
-    --time={resources.time}
+    --time={resources.runtime}
     --job-name=smk_{rule}
+    --account=yuk5
     --output=logs/slurm/{rule}.%j.out
     --error=logs/slurm/{rule}.%j.err
 default-resources:
@@ -14,17 +15,17 @@ default-resources:
   - mem=8gb
   - runtime=172800
   - extra=""
-jobs: 1000
+jobs: 100
 latency-wait: 60
 local-cores: 8
 restart-times: 1
-max-jobs-per-second: 10
+max-jobs-per-second: 2
 keep-going: True
 rerun-incomplete: True
 rerun-triggers: mtime
 printshellcmds: True
 scheduler: greedy
-use-conda: True
+use-conda: False
 conda-frontend: mamba
-max-status-checks-per-second: 10
+max-status-checks-per-second: 1
 local-cores: 8
