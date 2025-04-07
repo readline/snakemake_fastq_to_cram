@@ -22,3 +22,7 @@ rule all:
             sample=sampledic),
         expand(join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Status.ok"),
             sample=sampledic),
+    output:
+        join(config['workdir'], "Pipeline.done"),
+    shell:
+        "date >> {output}"
