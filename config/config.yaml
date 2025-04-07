@@ -11,3 +11,7 @@ intervals: 50
 
 conda:
     align: align
+
+partition:
+    normal: defq
+    highmem: defq

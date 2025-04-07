@@ -25,7 +25,7 @@ rule Fastp:
     resources:
         cpus_per_task = 12,
         mem = '24G',
-        slurm_partition = 'defq',
+        partition = lambda wildcards: config['partition']['normal'],
         runtime = '2d', 
     #conda:
     #    config['conda']['align']
