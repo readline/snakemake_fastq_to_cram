@@ -5,14 +5,15 @@ rule cramqc__parallel:
         cram = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "{sample}.BQSR.cram"),
     output:
         flagstat = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Flagstat", "Flagstat.json"),
-        metrix1 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "QualityYield.metrics"),
-        metrix2 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "WGS.metrics"),
-        metrix3 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "AllReadsMultiple.ok"),
-        metrix4 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "ReadGroupsMultiple.ok"),
-        metrix5 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "SM_LB_Aggregation.ok"),
         fingerprint = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Fingerprint", "fingerprint.vcf"),
-        fingerprint_metrics = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Fingerprint", "fingerprint.rg.metrics"),
+        metrix2 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "WGS.metrics"),
         status   = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Status.ok"),
+    params:
+        metrix1 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "QualityYield.metrics"),
+        metrix3 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "AllReadsMultiple"),
+        metrix4 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "ReadGroupsMultiple"),
+        metrix5 = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Metrics", "SM_LB_Aggregation"),
+        fingerprint_metrics = join(config['workdir'], "02.Alignment", "Level3", "{sample}", "QC", "Fingerprint", "fingerprint.rg.metrics"),
     log:
         out = join(config['pipelinedir'], "logs", "cramqc__parallel", "{sample}.o"),
         err = join(config['pipelinedir'], "logs", "cramqc__parallel", "{sample}.e"),
@@ -27,15 +28,15 @@ rule cramqc__parallel:
         config['container']['align']
     shell:
         '''echo > {log.out} 2> {log.err}
-        echo "
-        samtools flagstat -@ 2 -O json {input.cram} > {output.flagstat} 2>>{log.err}
+        echo "samtools flagstat -@ 2 -O json {input.cram} > {output.flagstat} 2>>{log.err}
         gatk --java-options \\"-Xms2g -Xmx3g\\" \
             CollectQualityYieldMetrics \
+            --VALIDATION_STRINGENCY LENIENT \
             -I {input.cram} \
-            -O {output.metrix1} \
+            -O {params.metrix1} \
             --CREATE_MD5_FILE true \
             -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
-            >> {log.out} 2>> {log.err}
+            > {log.out}.1 2> {log.err}.1
         gatk --java-options \\"-Xms2000m -Xmx3000m\\" \
             CollectWgsMetrics \
             -I {input.cram} \
@@ -43,15 +44,15 @@ rule cramqc__parallel:
             -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
             --INCLUDE_BQ_HISTOGRAM true \
             --INTERVALS {config[references][gatkbundle]}/wgs_coverage_regions.hg38.interval_list \
-            --VALIDATION_STRINGENCY SILENT \
+            --VALIDATION_STRINGENCY LENIENT \
             --USE_FAST_ALGORITHM true \
             --CREATE_MD5_FILE true \
             --READ_LENGTH 151 \
-            >> {log.out} 2>> {log.err}
+            > {log.out}.2 2> {log.err}.2
         gatk --java-options \\"-Xms2000m -Xmx3000m\\" \
             CollectMultipleMetrics \
             -I {input.cram} \
-            -O {output.metrix3} \
+            -O {params.metrix3} \
             --ASSUME_SORTED true \
             --CREATE_MD5_FILE true \
             -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
@@ -63,11 +64,11 @@ rule cramqc__parallel:
             --PROGRAM QualityScoreDistribution \
             --METRIC_ACCUMULATION_LEVEL null \
             --METRIC_ACCUMULATION_LEVEL ALL_READS \
-            >> {log.out} 2>> {log.err}
+            > {log.out}.3 2> {log.err}.3
         gatk --java-options \\"-Xms5000m -Xmx6500m\\" \
             CollectMultipleMetrics \
             -I {input.cram} \
-            -O {output.metrix4} \
+            -O {params.metrix4} \
             --ASSUME_SORTED true \
             --CREATE_MD5_FILE true \
             -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
@@ -79,11 +80,12 @@ rule cramqc__parallel:
             --PROGRAM QualityScoreDistribution \
             --METRIC_ACCUMULATION_LEVEL ALL_READS \
             --METRIC_ACCUMULATION_LEVEL READ_GROUP \
-            >> {log.out} 2>> {log.err}
+            > {log.out}.4 2> {log.err}.4
         gatk --java-options \\"-Xms5000m -Xmx6500m\\" \
             CollectMultipleMetrics \
             -I {input.cram} \
-            -O {output.metrix5} \
+            -O {params.metrix5} \
+            --VALIDATION_STRINGENCY LENIENT \
             --ASSUME_SORTED true \
             --CREATE_MD5_FILE true \
             -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
@@ -95,23 +97,25 @@ rule cramqc__parallel:
             --METRIC_ACCUMULATION_LEVEL null \
             --METRIC_ACCUMULATION_LEVEL SAMPLE \
             --METRIC_ACCUMULATION_LEVEL LIBRARY \
-            >> {log.out} 2>> {log.err}
+            > {log.out}.5 2> {log.err}.5
         gatk --java-options \\"-Xms5000m -Xmx6500m\\" \
             ExtractFingerprint \
+            --VALIDATION_STRINGENCY LENIENT \
             -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
             -H {config[references][gatkbundle]}/Homo_sapiens_assembly38.haplotype_database.txt \
             -I {input.cram} \
             -O {output.fingerprint} \
-            >> {log.out} 2>> {log.err}
+            > {log.out}.6 2> {log.err}.6
         gatk --java-options \\"-Xms5000m -Xmx6500m\\" \
             CrosscheckFingerprints \
+            --VALIDATION_STRINGENCY LENIENT \
             -R {config[references][gatkbundle]}/Homo_sapiens_assembly38.fasta \
             -H {config[references][gatkbundle]}/Homo_sapiens_assembly38.haplotype_database.txt \
             -I {input.cram} \
-            -O {output.fingerprint_metrics} \
-            >> {log.out} 2>> {log.err}
-        " | parallel -j 10
-        touch {output.status}
+            -O {params.fingerprint_metrics} \
+            > {log.out}.7 2> {log.err}.7
+        " | parallel -j 10 >> {log.out} 2>> {log.err}
+        touch {output.status} >> {log.out} 2>> {log.err}
         '''
 
 rule cramqc__flagstat:
